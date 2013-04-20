@@ -3,6 +3,8 @@ package me.chaseoes.donator;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -41,10 +43,17 @@ public class DonateEventListener implements Listener {
 		try {
 			while (r.next()) {
 				for (String pack : plugin.getConfig().getConfigurationSection("packages").getKeys(false)) {
-					String price = plugin.getConfig().getString("packages." + pack + ".price");
+					Double price = 1000.0;
+					try {
+						price = Double.parseDouble(plugin.getConfig().getString("packages." + pack + ".price"));
+					} catch (NumberFormatException e) {
+						plugin.getLogger().log(Level.SEVERE, "Please format the price for " + pack + " in the right way.");
+						continue;
+					}
+					
 					List<String> commands = plugin.getConfig().getStringList("packages." + pack + ".commands");
 					if (!plugin.getConfig().getBoolean("settings.cumulativepackages")) {
-						if (amount.equals(price) || (amount + "0").equals(price)) {
+						if (amount >= price) {
 							r.updateString("expires", plugin.getExpiresDate(pack));
 							for (String cmnd : commands) {
 								plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), cmnd.replace("%player", user).replace("%amount", plugin.parseAmount(amount)));
@@ -52,7 +61,7 @@ public class DonateEventListener implements Listener {
 						}
 					} else {
 						Double total = plugin.getTotalDonated(r.getString("username")) + amount;
-						if (total.equals(price) || (total + "0").equals(price)) {
+						if (total >= price) {
 							r.updateString("expires", plugin.getExpiresDate(pack));
 							for (String cmnd : commands) {
 								plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), cmnd.replace("%player", user).replace("%amount", plugin.parseAmount(amount)));
